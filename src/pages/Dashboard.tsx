@@ -4,8 +4,9 @@ import { NetWorthHero } from '@/components/dashboard/NetWorthHero';
 import { MonthlyPulse } from '@/components/dashboard/MonthlyPulse';
 import { InboxFeed } from '@/components/dashboard/InboxFeed';
 import { TransactionModal } from '@/components/transactions/TransactionModal';
-import { Transaction } from '@/lib/mockData';
-import { motion } from 'framer-motion';
+import { Transaction, mockTransactions, mockHoldings } from '@/lib/mockData';
+import { Wallet, TrendingUp, PiggyBank, Target } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -21,50 +22,93 @@ const Dashboard = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  const handleConfirm = (id: string) => {
-    console.log('Confirming transaction:', id);
-    handleCloseModal();
-  };
+  const totalExpenses = mockTransactions
+    .filter(t => t.type === 'expense' && t.date.startsWith('2025-01'))
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  const handleDelete = (id: string) => {
-    console.log('Deleting transaction:', id);
-    handleCloseModal();
-  };
+  const totalHoldings = mockHoldings.length;
 
   return (
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-2"
-        >
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Dashboard
-          </h1>
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Your financial overview at a glance
+            Your financial overview
           </p>
-        </motion.div>
+        </div>
 
         {/* Net Worth Hero */}
         <NetWorthHero />
 
-        {/* Grid: Monthly Pulse + Inbox Feed */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <MonthlyPulse />
-          <InboxFeed onTransactionClick={handleTransactionClick} />
+        {/* Quick Stats */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">This Month</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold tabular-nums">
+              ${totalExpenses.toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground">spent</p>
+          </div>
+          
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Holdings</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold">{totalHoldings}</p>
+            <p className="text-xs text-muted-foreground">assets</p>
+          </div>
+          
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <PiggyBank className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Savings Rate</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold text-success">24%</p>
+            <p className="text-xs text-muted-foreground">of income</p>
+          </div>
+          
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Budget</span>
+            </div>
+            <p className="mt-1 text-lg font-semibold">78%</p>
+            <p className="text-xs text-muted-foreground">used</p>
+          </div>
         </div>
+
+        {/* Grid: Monthly Pulse + Inbox Feed */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <MonthlyPulse />
+          <Link 
+            to="/portfolio" 
+            className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-secondary"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Portfolio Performance</p>
+                <p className="mt-1 text-2xl font-semibold text-success">+22.06%</p>
+                <p className="text-xs text-muted-foreground">All-time return</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-success/50" />
+            </div>
+          </Link>
+        </div>
+
+        {/* Recent Activity */}
+        <InboxFeed onTransactionClick={handleTransactionClick} />
       </div>
 
-      {/* Transaction Modal */}
       <TransactionModal
         transaction={selectedTransaction}
         open={modalOpen}
         onClose={handleCloseModal}
-        onConfirm={handleConfirm}
-        onDelete={handleDelete}
       />
     </AppLayout>
   );

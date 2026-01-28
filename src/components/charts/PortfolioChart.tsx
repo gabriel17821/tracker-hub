@@ -21,7 +21,6 @@ export function PortfolioChart({ data }: PortfolioChartProps) {
 
   const timeRanges: TimeRange[] = ['1W', '1M', '3M', '1Y', 'ALL'];
 
-  // Filter data based on time range (mock - in reality would filter by date)
   const getFilteredData = () => {
     switch (timeRange) {
       case '1W':
@@ -56,16 +55,16 @@ export function PortfolioChart({ data }: PortfolioChartProps) {
   return (
     <div className="w-full">
       {/* Time Range Toggles */}
-      <div className="mb-4 flex items-center justify-end gap-1">
+      <div className="mb-3 flex items-center justify-end gap-1">
         {timeRanges.map((range) => (
           <button
             key={range}
             onClick={() => setTimeRange(range)}
             className={cn(
-              'rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200',
+              'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
               timeRange === range
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                ? 'bg-secondary text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             {range}
@@ -74,7 +73,7 @@ export function PortfolioChart({ data }: PortfolioChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="h-48 w-full sm:h-64">
+      <div className="h-40 w-full sm:h-48">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={filteredData}
@@ -82,9 +81,8 @@ export function PortfolioChart({ data }: PortfolioChartProps) {
           >
             <defs>
               <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(252 87% 64%)" stopOpacity={0.4} />
-                <stop offset="50%" stopColor="hsl(217 91% 60%)" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="hsl(217 91% 60%)" stopOpacity={0} />
+                <stop offset="0%" stopColor="hsl(var(--foreground))" stopOpacity={0.1} />
+                <stop offset="100%" stopColor="hsl(var(--foreground))" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis
@@ -92,25 +90,25 @@ export function PortfolioChart({ data }: PortfolioChartProps) {
               tickFormatter={formatDate}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(215 20% 65%)', fontSize: 11 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
               dy={10}
             />
             <YAxis
               tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(215 20% 65%)', fontSize: 11 }}
-              width={50}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              width={45}
             />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="glass-card border border-border/50 px-3 py-2">
+                    <div className="rounded-md border border-border bg-card px-3 py-2 shadow-sm">
                       <p className="text-xs text-muted-foreground">
                         {formatDate(label)}
                       </p>
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="text-sm font-medium">
                         {formatCurrency(payload[0].value as number)}
                       </p>
                     </div>
@@ -122,16 +120,10 @@ export function PortfolioChart({ data }: PortfolioChartProps) {
             <Area
               type="monotone"
               dataKey="value"
-              stroke="url(#portfolioStroke)"
-              strokeWidth={2}
+              stroke="hsl(var(--foreground))"
+              strokeWidth={1.5}
               fill="url(#portfolioGradient)"
             />
-            <defs>
-              <linearGradient id="portfolioStroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="hsl(252 87% 64%)" />
-                <stop offset="100%" stopColor="hsl(217 91% 60%)" />
-              </linearGradient>
-            </defs>
           </AreaChart>
         </ResponsiveContainer>
       </div>

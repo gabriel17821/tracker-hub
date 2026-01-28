@@ -1,7 +1,5 @@
-import { GlassCard } from '@/components/ui/glass-card';
 import { Trade } from '@/lib/mockData';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 interface TradeHistoryProps {
@@ -21,50 +19,42 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
     });
   };
 
   return (
-    <GlassCard className="overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-border/50 p-4">
-        <h3 className="font-semibold">Recent Trades</h3>
+    <div className="rounded-lg border border-border bg-card">
+      <div className="border-b border-border p-4">
+        <h3 className="text-sm font-medium">Recent Trades</h3>
       </div>
 
-      {/* Trade List */}
-      <div className="divide-y divide-border/30">
-        {trades.map((trade, index) => (
-          <motion.div
+      <div className="divide-y divide-border">
+        {trades.map((trade) => (
+          <div
             key={trade.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="flex items-center gap-3 p-4"
+            className="flex items-center gap-3 p-3"
           >
-            {/* Icon */}
             <div
               className={cn(
-                'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl',
+                'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md',
                 trade.type === 'buy'
                   ? 'bg-success/10 text-success'
                   : 'bg-destructive/10 text-destructive'
               )}
             >
               {trade.type === 'buy' ? (
-                <ArrowDownLeft className="h-5 w-5" />
+                <ArrowDownLeft className="h-4 w-4" />
               ) : (
-                <ArrowUpRight className="h-5 w-5" />
+                <ArrowUpRight className="h-4 w-4" />
               )}
             </div>
 
-            {/* Details */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-medium">{trade.symbol}</span>
+                <span className="text-sm font-medium">{trade.symbol}</span>
                 <span
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-xs font-medium uppercase',
+                    'rounded px-1.5 py-0.5 text-[10px] font-medium uppercase',
                     trade.type === 'buy'
                       ? 'bg-success/10 text-success'
                       : 'bg-destructive/10 text-destructive'
@@ -78,22 +68,21 @@ export function TradeHistory({ trades }: TradeHistoryProps) {
               </p>
             </div>
 
-            {/* Amount & Date */}
             <div className="text-right">
-              <p className="font-medium tabular-nums">
+              <p className="text-sm font-medium tabular-nums">
                 {trade.type === 'buy' ? '-' : '+'}{formatCurrency(trade.total)}
               </p>
               <p className="text-xs text-muted-foreground">{formatDate(trade.date)}</p>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
       {trades.length === 0 && (
-        <div className="p-8 text-center text-muted-foreground">
+        <div className="p-8 text-center text-sm text-muted-foreground">
           No trades yet
         </div>
       )}
-    </GlassCard>
+    </div>
   );
 }

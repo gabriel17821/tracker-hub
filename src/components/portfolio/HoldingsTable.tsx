@@ -1,8 +1,6 @@
-import { GlassCard } from '@/components/ui/glass-card';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { Holding } from '@/lib/mockData';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface HoldingsTableProps {
@@ -24,28 +22,27 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
   };
 
   return (
-    <GlassCard className="overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-border/50 p-4">
-        <h3 className="font-semibold">Holdings</h3>
+    <div className="rounded-lg border border-border bg-card">
+      <div className="border-b border-border p-4">
+        <h3 className="text-sm font-medium">Holdings</h3>
       </div>
 
       {/* Desktop Table */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
-              <th className="p-4 font-medium">Asset</th>
-              <th className="p-4 font-medium">Price</th>
-              <th className="p-4 font-medium">24h</th>
-              <th className="p-4 font-medium">Trend</th>
-              <th className="p-4 font-medium text-right">Holdings</th>
-              <th className="p-4 font-medium text-right">Value</th>
-              <th className="p-4 font-medium text-right">Gain/Loss</th>
+            <tr className="border-b border-border text-left text-xs text-muted-foreground">
+              <th className="p-3 font-medium">Asset</th>
+              <th className="p-3 font-medium">Price</th>
+              <th className="p-3 font-medium">24h</th>
+              <th className="p-3 font-medium">Trend</th>
+              <th className="p-3 font-medium text-right">Holdings</th>
+              <th className="p-3 font-medium text-right">Value</th>
+              <th className="p-3 font-medium text-right">Gain/Loss</th>
             </tr>
           </thead>
           <tbody>
-            {holdings.map((holding, index) => {
+            {holdings.map((holding) => {
               const value = holding.quantity * holding.currentPrice;
               const costBasisTotal = holding.quantity * holding.costBasis;
               const gainLoss = value - costBasisTotal;
@@ -54,30 +51,27 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
               const isGainPositive = gainLoss >= 0;
 
               return (
-                <motion.tr
+                <tr
                   key={holding.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="border-b border-border/30 transition-colors hover:bg-accent/30"
+                  className="border-b border-border transition-colors hover:bg-secondary"
                 >
-                  <td className="p-4">
+                  <td className="p-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-secondary text-xs font-semibold">
                         {holding.symbol.slice(0, 2)}
                       </div>
                       <div>
-                        <p className="font-medium">{holding.symbol}</p>
+                        <p className="text-sm font-medium">{holding.symbol}</p>
                         <p className="text-xs text-muted-foreground">
                           {holding.name}
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="p-4 tabular-nums">
+                  <td className="p-3 text-sm tabular-nums">
                     {formatCurrency(holding.currentPrice)}
                   </td>
-                  <td className="p-4">
+                  <td className="p-3">
                     <div
                       className={cn(
                         'flex items-center gap-1 text-sm',
@@ -92,20 +86,20 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                       {formatPercentage(holding.change24h)}
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-3">
                     <Sparkline
                       data={holding.sparklineData}
                       positive={isPositive}
-                      className="h-8 w-24"
+                      className="h-6 w-16"
                     />
                   </td>
-                  <td className="p-4 text-right tabular-nums">
+                  <td className="p-3 text-right text-sm tabular-nums">
                     {holding.quantity.toLocaleString()}
                   </td>
-                  <td className="p-4 text-right font-medium tabular-nums">
+                  <td className="p-3 text-right text-sm font-medium tabular-nums">
                     {formatCurrency(value)}
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-3 text-right">
                     <div
                       className={cn(
                         'text-sm tabular-nums',
@@ -118,7 +112,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                       </span>
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               );
             })}
           </tbody>
@@ -126,30 +120,23 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
       </div>
 
       {/* Mobile Cards */}
-      <div className="divide-y divide-border/30 md:hidden">
-        {holdings.map((holding, index) => {
+      <div className="divide-y divide-border md:hidden">
+        {holdings.map((holding) => {
           const value = holding.quantity * holding.currentPrice;
           const costBasisTotal = holding.quantity * holding.costBasis;
           const gainLoss = value - costBasisTotal;
-          const gainLossPercent = ((gainLoss / costBasisTotal) * 100);
           const isPositive = holding.change24h >= 0;
           const isGainPositive = gainLoss >= 0;
 
           return (
-            <motion.div
-              key={holding.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="p-4"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
+            <div key={holding.id} className="p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-secondary text-xs font-semibold">
                     {holding.symbol.slice(0, 2)}
                   </div>
                   <div>
-                    <p className="font-medium">{holding.symbol}</p>
+                    <p className="text-sm font-medium">{holding.symbol}</p>
                     <p className="text-xs text-muted-foreground">
                       {holding.name}
                     </p>
@@ -158,7 +145,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                 <Sparkline
                   data={holding.sparklineData}
                   positive={isPositive}
-                  className="h-8 w-16"
+                  className="h-6 w-12"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -178,10 +165,10 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>
-    </GlassCard>
+    </div>
   );
 }

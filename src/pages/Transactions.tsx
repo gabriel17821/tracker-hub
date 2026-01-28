@@ -1,37 +1,41 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { GlassCard } from '@/components/ui/glass-card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { CategoryIcon, getCategoryLabel } from '@/components/ui/category-icon';
 import { TransactionModal } from '@/components/transactions/TransactionModal';
-import { Transaction, mockTransactions, categoryColors } from '@/lib/mockData';
+import { Transaction, mockTransactions, TransactionCategory } from '@/lib/mockData';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Search, Filter, Plus, ChevronRight, Calendar } from 'lucide-react';
-import { motion } from 'framer-motion';
+  Search,
+  Plus,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Calendar,
+  Filter,
+  Download,
+  Upload,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Transactions = () => {
   const [transactions] = useState<Transaction[]>(mockTransactions);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-
-  const categories = ['all', ...new Set(transactions.map((t) => t.category))];
+  const [activeTab, setActiveTab] = useState('all');
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
       t.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+      getCategoryLabel(t.category).toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (activeTab === 'all') return matchesSearch;
+    if (activeTab === 'income') return matchesSearch && t.type === 'income';
+    if (activeTab === 'expenses') return matchesSearch && t.type === 'expense';
+    if (activeTab === 'pending') return matchesSearch && t.status === 'pending';
+    return matchesSearch;
   });
 
   // Group transactions by date
@@ -83,156 +87,163 @@ const Transactions = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  const categoryEmoji: Record<string, string> = {
-    Shopping: '🛍️',
-    Groceries: '🥬',
-    Subscriptions: '📺',
-    Transportation: '⛽',
-    Housing: '🏠',
-    'Food & Dining': '🍕',
-  };
-
-  // Calculate total
-  const totalSpent = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+  // Calculate totals
+  const totalIncome = filteredTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = filteredTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Transactions
-            </h1>
+            <h1 className="text-xl font-semibold tracking-tight">Transactions</h1>
             <p className="text-sm text-muted-foreground">
-              Manage and track your expenses
+              Track and manage your expenses
             </p>
           </div>
-          <Button className="gap-2 rounded-xl">
-            <Plus className="h-4 w-4" />
-            Add Transaction
-          </Button>
-        </motion.div>
-
-        {/* Summary Card */}
-        <GlassCard className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Spending</p>
-              <p className="text-2xl font-bold tabular-nums">
-                {formatCurrency(totalSpent)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Transactions</p>
-              <p className="text-2xl font-bold">{filteredTransactions.length}</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Upload className="h-4 w-4" />
+              Import
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+            <Button size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
           </div>
-        </GlassCard>
-
-        {/* Filters */}
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search transactions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="rounded-xl pl-9"
-            />
-          </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full rounded-xl sm:w-48">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat === 'all' ? 'All Categories' : cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
-        {/* Transaction List by Date */}
-        <div className="space-y-6">
-          {Object.entries(groupedTransactions)
-            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-            .map(([date, transactions]) => (
-              <div key={date}>
-                {/* Date Header */}
-                <div className="mb-3 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {formatDate(date)}
-                  </span>
-                </div>
+        {/* Summary Cards */}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Income</span>
+            </div>
+            <p className="mt-1 text-xl font-semibold text-success tabular-nums">
+              +{formatCurrency(totalIncome)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <ArrowDownLeft className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Expenses</span>
+            </div>
+            <p className="mt-1 text-xl font-semibold tabular-nums">
+              -{formatCurrency(totalExpenses)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Net</span>
+            </div>
+            <p className={cn(
+              'mt-1 text-xl font-semibold tabular-nums',
+              totalIncome - totalExpenses >= 0 ? 'text-success' : 'text-destructive'
+            )}>
+              {totalIncome - totalExpenses >= 0 ? '+' : ''}{formatCurrency(totalIncome - totalExpenses)}
+            </p>
+          </div>
+        </div>
 
-                {/* Transactions */}
-                <GlassCard className="divide-y divide-border/50">
-                  {transactions.map((transaction, index) => (
-                    <motion.button
-                      key={transaction.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      onClick={() => handleTransactionClick(transaction)}
-                      className={cn(
-                        'flex w-full items-center gap-3 p-4 text-left transition-all duration-200',
-                        'hover:bg-accent/30 active:bg-accent/50'
-                      )}
-                    >
-                      {/* Category Icon */}
-                      <div
-                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg"
-                        style={{
-                          backgroundColor: `${categoryColors[transaction.category]}20`,
-                        }}
-                      >
-                        {categoryEmoji[transaction.category] || '📄'}
-                      </div>
-
-                      {/* Details */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate font-medium">
-                            {transaction.merchant}
-                          </span>
-                          <StatusBadge status={transaction.status} />
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {transaction.category}
-                        </span>
-                      </div>
-
-                      {/* Amount */}
-                      <span className="flex-shrink-0 font-semibold tabular-nums">
-                        -{formatCurrency(transaction.amount)}
-                      </span>
-
-                      <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    </motion.button>
-                  ))}
-                </GlassCard>
+        {/* Tabs & Filters */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <TabsList className="w-full justify-start sm:w-auto">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="income">Income</TabsTrigger>
+              <TabsTrigger value="expenses">Expenses</TabsTrigger>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+            </TabsList>
+            
+            <div className="flex gap-2">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-9 pl-9"
+                />
               </div>
-            ))}
-        </div>
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-        {/* Empty State */}
-        {filteredTransactions.length === 0 && (
-          <GlassCard className="p-12 text-center">
-            <p className="text-muted-foreground">No transactions found</p>
-          </GlassCard>
-        )}
+          <TabsContent value={activeTab} className="mt-4">
+            {/* Transaction List by Date */}
+            <div className="space-y-4">
+              {Object.entries(groupedTransactions)
+                .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                .map(([date, dayTransactions]) => (
+                  <div key={date}>
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {formatDate(date)}
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+
+                    <div className="space-y-1">
+                      {dayTransactions.map((transaction) => (
+                        <button
+                          key={transaction.id}
+                          onClick={() => handleTransactionClick(transaction)}
+                          className={cn(
+                            'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors',
+                            'hover:bg-secondary'
+                          )}
+                        >
+                          <CategoryIcon category={transaction.category} size="sm" />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium">
+                                {transaction.merchant}
+                              </span>
+                              {transaction.status === 'pending' && (
+                                <StatusBadge status={transaction.status} />
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {getCategoryLabel(transaction.category)}
+                            </span>
+                          </div>
+
+                          <span className={cn(
+                            'text-sm font-medium tabular-nums',
+                            transaction.type === 'income' ? 'text-success' : ''
+                          )}>
+                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {filteredTransactions.length === 0 && (
+              <div className="rounded-lg border border-border bg-card p-12 text-center">
+                <p className="text-sm text-muted-foreground">No transactions found</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Transaction Modal */}
       <TransactionModal
         transaction={selectedTransaction}
         open={modalOpen}
