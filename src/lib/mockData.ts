@@ -4,13 +4,29 @@ export interface Transaction {
   id: string;
   amount: number;
   merchant: string;
-  category: string;
+  category: TransactionCategory;
   date: string;
   status: 'pending' | 'confirmed';
   imageUrl?: string;
   aiInsight?: string;
   source: 'whatsapp' | 'manual' | 'import';
+  type: 'expense' | 'income';
 }
+
+export type TransactionCategory = 
+  | 'shopping'
+  | 'groceries'
+  | 'subscriptions'
+  | 'transportation'
+  | 'housing'
+  | 'food'
+  | 'entertainment'
+  | 'utilities'
+  | 'health'
+  | 'travel'
+  | 'education'
+  | 'income'
+  | 'other';
 
 export interface Holding {
   id: string;
@@ -51,7 +67,6 @@ const generateSparkline = (base: number, volatility: number = 0.05): number[] =>
     current = Math.max(current + change, base * 0.8);
     data.push(current);
   }
-  // End near the current price
   data[data.length - 1] = base;
   return data;
 };
@@ -75,66 +90,94 @@ export const mockTransactions: Transaction[] = [
     id: 't1',
     amount: 156.78,
     merchant: 'Amazon',
-    category: 'Shopping',
+    category: 'shopping',
     date: '2025-01-28',
     status: 'pending',
     imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=200&h=200&fit=crop',
     aiInsight: 'This purchase is 23% higher than your average Amazon order. Consider reviewing if all items were necessary.',
     source: 'whatsapp',
+    type: 'expense',
   },
   {
     id: 't2',
     amount: 89.50,
     merchant: 'Whole Foods',
-    category: 'Groceries',
+    category: 'groceries',
     date: '2025-01-27',
     status: 'confirmed',
     imageUrl: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200&h=200&fit=crop',
     aiInsight: 'Your grocery spending is on track this month. You\'re 12% under your monthly grocery budget.',
     source: 'whatsapp',
+    type: 'expense',
   },
   {
     id: 't3',
     amount: 45.00,
     merchant: 'Netflix + Spotify',
-    category: 'Subscriptions',
+    category: 'subscriptions',
     date: '2025-01-26',
     status: 'confirmed',
     imageUrl: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop',
     aiInsight: 'You have 3 active streaming subscriptions totaling $45/month. Consider bundling options to save.',
     source: 'manual',
+    type: 'expense',
   },
   {
     id: 't4',
     amount: 234.56,
     merchant: 'Shell Gas Station',
-    category: 'Transportation',
+    category: 'transportation',
     date: '2025-01-25',
     status: 'pending',
     imageUrl: 'https://images.unsplash.com/photo-1545262810-77515befe149?w=200&h=200&fit=crop',
     aiInsight: 'Fuel costs are up 15% this month. Your driving patterns suggest a potential savings of $40/month with route optimization.',
     source: 'whatsapp',
+    type: 'expense',
   },
   {
     id: 't5',
     amount: 1250.00,
     merchant: 'Rent Payment',
-    category: 'Housing',
+    category: 'housing',
     date: '2025-01-01',
     status: 'confirmed',
     aiInsight: 'Housing costs represent 28% of your monthly income, which is within the recommended 30% threshold.',
     source: 'manual',
+    type: 'expense',
   },
   {
     id: 't6',
     amount: 67.89,
     merchant: 'Uber Eats',
-    category: 'Food & Dining',
+    category: 'food',
     date: '2025-01-24',
     status: 'confirmed',
     imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200&h=200&fit=crop',
     aiInsight: 'Food delivery spending has increased 45% this month. Cooking at home could save you approximately $200/month.',
     source: 'whatsapp',
+    type: 'expense',
+  },
+  {
+    id: 't7',
+    amount: 3500.00,
+    merchant: 'Salary Deposit',
+    category: 'income',
+    date: '2025-01-15',
+    status: 'confirmed',
+    aiInsight: 'Your monthly salary has been deposited. You\'re on track to meet your savings goals.',
+    source: 'manual',
+    type: 'income',
+  },
+  {
+    id: 't8',
+    amount: 120.00,
+    merchant: 'Electric Company',
+    category: 'utilities',
+    date: '2025-01-20',
+    status: 'confirmed',
+    aiInsight: 'Your electricity bill is 8% lower than last month. Great job on energy conservation!',
+    source: 'manual',
+    type: 'expense',
   },
 ];
 
@@ -223,35 +266,21 @@ export const calculateNetWorth = (): number => {
 };
 
 export const calculateMonthlyChange = (): { amount: number; percentage: number } => {
-  const currentMonth = mockTransactions
-    .filter(t => t.date.startsWith('2025-01'))
+  const expenses = mockTransactions
+    .filter(t => t.date.startsWith('2025-01') && t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
   
-  const previousMonth = 2850; // Mock previous month total
-  const change = currentMonth - previousMonth;
-  const percentage = ((change / previousMonth) * 100);
+  const income = mockTransactions
+    .filter(t => t.date.startsWith('2025-01') && t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
   
-  return { amount: change, percentage };
+  const netFlow = income - expenses;
+  const percentage = income > 0 ? ((netFlow / income) * 100) : 0;
+  
+  return { amount: netFlow, percentage };
 };
 
-// Categories with colors for charts
-export const categoryColors: Record<string, string> = {
-  'Shopping': 'hsl(252 87% 64%)',
-  'Groceries': 'hsl(142 76% 36%)',
-  'Subscriptions': 'hsl(217 91% 60%)',
-  'Transportation': 'hsl(38 92% 50%)',
-  'Housing': 'hsl(0 84% 60%)',
-  'Food & Dining': 'hsl(280 87% 64%)',
-};
-
-// Asset type colors for treemap
-export const assetTypeColors: Record<string, string> = {
-  'stock': 'hsl(217 91% 60%)',
-  'crypto': 'hsl(38 92% 50%)',
-  'etf': 'hsl(142 76% 36%)',
-  'cash': 'hsl(215 20% 65%)',
-};
-
+// Asset type labels
 export const assetTypeLabels: Record<string, string> = {
   'stock': 'Stocks',
   'crypto': 'Crypto',
