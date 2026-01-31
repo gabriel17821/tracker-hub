@@ -1,81 +1,54 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { CategoryIcon, getCategoryLabel } from '@/components/ui/category-icon';
 import { TransactionModal } from '@/components/transactions/TransactionModal';
+import { AddTransactionForm } from '@/components/transactions/AddTransactionForm';
 import { Transaction, mockTransactions, TransactionCategory } from '@/lib/mockData';
-import { Input } from '@/components/ui/input';
+import { CategoryIcon } from '@/components/ui/category-icon';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Search,
-  Plus,
-  ArrowDownLeft,
+import { 
+  Search, 
+  Plus, 
+  Minus,
+  TrendingUp,
+  TrendingDown,
   ArrowUpRight,
-  Calendar,
-  Filter,
-  Download,
-  Upload,
+  ArrowDownRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const Transactions = () => {
-  const [transactions] = useState<Transaction[]>(mockTransactions);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>(
+    'tracker-transactions',
+    mockTransactions
+  );
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showIncomeForm, setShowIncomeForm] = useState(false);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
 
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesSearch =
+  // Separate income and expenses
+  const { incomeTransactions, expenseTransactions, pendingTransactions } = useMemo(() => {
+    const filtered = transactions.filter(t =>
       t.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getCategoryLabel(t.category).toLowerCase().includes(searchQuery.toLowerCase());
+      t.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
     
-    if (activeTab === 'all') return matchesSearch;
-    if (activeTab === 'income') return matchesSearch && t.type === 'income';
-    if (activeTab === 'expenses') return matchesSearch && t.type === 'expense';
-    if (activeTab === 'pending') return matchesSearch && t.status === 'pending';
-    return matchesSearch;
-  });
+    return {
+      incomeTransactions: filtered.filter(t => t.type === 'income'),
+      expenseTransactions: filtered.filter(t => t.type === 'expense'),
+      pendingTransactions: filtered.filter(t => t.status === 'pending'),
+    };
+  }, [transactions, searchQuery]);
 
-  // Group transactions by date
-  const groupedTransactions = filteredTransactions.reduce(
-    (groups, transaction) => {
-      const date = transaction.date;
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(transaction);
-      return groups;
-    },
-    {} as Record<string, Transaction[]>
-  );
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    }
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
+  // Calculate totals
+  const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const netFlow = totalIncome - totalExpenses;
 
   const handleTransactionClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -87,159 +60,237 @@ const Transactions = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  // Calculate totals
-  const totalIncome = filteredTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = filteredTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const handleAddTransaction = (data: {
+    amount: number;
+    merchant: string;
+    category: TransactionCategory;
+    date: string;
+    type: 'income' | 'expense';
+  }) => {
+    const newTransaction: Transaction = {
+      id: `t-${Date.now()}`,
+      ...data,
+      status: 'confirmed',
+      source: 'manual',
+    };
+    setTransactions([newTransaction, ...transactions]);
+  };
+
+  // Group transactions by date
+  const groupByDate = (txns: Transaction[]) => {
+    const groups: Record<string, Transaction[]> = {};
+    txns.forEach(t => {
+      const date = t.date;
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(t);
+    });
+    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+  };
+
+  const TransactionList = ({ items, emptyMessage }: { items: Transaction[]; emptyMessage: string }) => {
+    const grouped = groupByDate(items);
+    
+    if (items.length === 0) {
+      return (
+        <div className="py-12 text-center">
+          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {grouped.map(([date, txns]) => (
+          <div key={date}>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              {new Date(date).toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </p>
+            <div className="space-y-1">
+              {txns.map((transaction) => (
+                <button
+                  key={transaction.id}
+                  onClick={() => handleTransactionClick(transaction)}
+                  className="flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-secondary/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <CategoryIcon category={transaction.category} />
+                    <div>
+                      <p className="text-sm font-medium">{transaction.merchant}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {transaction.category}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "text-sm font-semibold tabular-nums",
+                      transaction.type === 'income' ? "text-success" : "text-foreground"
+                    )}>
+                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                    </span>
+                    {transaction.status === 'pending' && <StatusBadge status="pending" />}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Transactions</h1>
-            <p className="text-sm text-muted-foreground">
-              Track and manage your expenses
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Upload className="h-4 w-4" />
-              Import
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-            <Button size="sm" className="gap-1.5">
-              <Plus className="h-4 w-4" />
-              Add
-            </Button>
-          </div>
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Transactions</h1>
+          <p className="text-sm text-muted-foreground">
+            Track your income and expenses
+          </p>
         </div>
 
         {/* Summary Cards */}
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2">
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Income</span>
+          <button 
+            onClick={() => setShowIncomeForm(true)}
+            className="group rounded-lg border border-border bg-card p-4 text-left transition-all hover:border-success/50 hover:bg-success/5"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10">
+                  <ArrowUpRight className="h-4 w-4 text-success" />
+                </div>
+                <span className="text-sm text-muted-foreground">Income</span>
+              </div>
+              <Plus className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
             </div>
-            <p className="mt-1 text-xl font-semibold text-success tabular-nums">
-              +{formatCurrency(totalIncome)}
+            <p className="mt-2 text-xl font-semibold tabular-nums text-success">
+              +${totalIncome.toLocaleString()}
             </p>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2">
-              <ArrowDownLeft className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Expenses</span>
+          </button>
+          
+          <button
+            onClick={() => setShowExpenseForm(true)}
+            className="group rounded-lg border border-border bg-card p-4 text-left transition-all hover:border-destructive/50 hover:bg-destructive/5"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/10">
+                  <ArrowDownRight className="h-4 w-4 text-destructive" />
+                </div>
+                <span className="text-sm text-muted-foreground">Expenses</span>
+              </div>
+              <Minus className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
             </div>
-            <p className="mt-1 text-xl font-semibold tabular-nums">
-              -{formatCurrency(totalExpenses)}
+            <p className="mt-2 text-xl font-semibold tabular-nums text-destructive">
+              -${totalExpenses.toLocaleString()}
             </p>
-          </div>
+          </button>
+
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Net</span>
+              <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full",
+                netFlow >= 0 ? "bg-success/10" : "bg-destructive/10"
+              )}>
+                {netFlow >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-success" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-destructive" />
+                )}
+              </div>
+              <span className="text-sm text-muted-foreground">Net Flow</span>
             </div>
             <p className={cn(
-              'mt-1 text-xl font-semibold tabular-nums',
-              totalIncome - totalExpenses >= 0 ? 'text-success' : 'text-destructive'
+              "mt-2 text-xl font-semibold tabular-nums",
+              netFlow >= 0 ? "text-success" : "text-destructive"
             )}>
-              {totalIncome - totalExpenses >= 0 ? '+' : ''}{formatCurrency(totalIncome - totalExpenses)}
+              {netFlow >= 0 ? '+' : ''}${netFlow.toLocaleString()}
             </p>
           </div>
         </div>
 
-        {/* Tabs & Filters */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList className="w-full justify-start sm:w-auto">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="income">Income</TabsTrigger>
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-            </TabsList>
-            
-            <div className="flex gap-2">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 pl-9"
-                />
-              </div>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <Filter className="h-4 w-4" />
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search transactions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="all" className="flex-1 sm:flex-none">
+              All
+            </TabsTrigger>
+            <TabsTrigger value="income" className="flex-1 sm:flex-none">
+              <ArrowUpRight className="mr-1 h-3 w-3 text-success" />
+              Income
+            </TabsTrigger>
+            <TabsTrigger value="expenses" className="flex-1 sm:flex-none">
+              <ArrowDownRight className="mr-1 h-3 w-3 text-destructive" />
+              Expenses
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="flex-1 sm:flex-none">
+              Pending
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="mt-4">
+            <TransactionList 
+              items={[...incomeTransactions, ...expenseTransactions].sort((a, b) => 
+                b.date.localeCompare(a.date)
+              )} 
+              emptyMessage="No transactions yet"
+            />
+          </TabsContent>
+
+          <TabsContent value="income" className="mt-4">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {incomeTransactions.length} income transactions
+              </p>
+              <Button size="sm" variant="outline" onClick={() => setShowIncomeForm(true)}>
+                <Plus className="mr-1 h-4 w-4" />
+                Add Income
               </Button>
             </div>
-          </div>
+            <TransactionList 
+              items={incomeTransactions} 
+              emptyMessage="No income recorded yet"
+            />
+          </TabsContent>
 
-          <TabsContent value={activeTab} className="mt-4">
-            {/* Transaction List by Date */}
-            <div className="space-y-4">
-              {Object.entries(groupedTransactions)
-                .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-                .map(([date, dayTransactions]) => (
-                  <div key={date}>
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {formatDate(date)}
-                      </span>
-                      <div className="h-px flex-1 bg-border" />
-                    </div>
-
-                    <div className="space-y-1">
-                      {dayTransactions.map((transaction) => (
-                        <button
-                          key={transaction.id}
-                          onClick={() => handleTransactionClick(transaction)}
-                          className={cn(
-                            'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors',
-                            'hover:bg-secondary'
-                          )}
-                        >
-                          <CategoryIcon category={transaction.category} size="sm" />
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate text-sm font-medium">
-                                {transaction.merchant}
-                              </span>
-                              {transaction.status === 'pending' && (
-                                <StatusBadge status={transaction.status} />
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {getCategoryLabel(transaction.category)}
-                            </span>
-                          </div>
-
-                          <span className={cn(
-                            'text-sm font-medium tabular-nums',
-                            transaction.type === 'income' ? 'text-success' : ''
-                          )}>
-                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+          <TabsContent value="expenses" className="mt-4">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {expenseTransactions.length} expense transactions
+              </p>
+              <Button size="sm" variant="outline" onClick={() => setShowExpenseForm(true)}>
+                <Minus className="mr-1 h-4 w-4" />
+                Add Expense
+              </Button>
             </div>
+            <TransactionList 
+              items={expenseTransactions} 
+              emptyMessage="No expenses recorded yet"
+            />
+          </TabsContent>
 
-            {filteredTransactions.length === 0 && (
-              <div className="rounded-lg border border-border bg-card p-12 text-center">
-                <p className="text-sm text-muted-foreground">No transactions found</p>
-              </div>
-            )}
+          <TabsContent value="pending" className="mt-4">
+            <TransactionList 
+              items={pendingTransactions} 
+              emptyMessage="No pending transactions"
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -248,6 +299,20 @@ const Transactions = () => {
         transaction={selectedTransaction}
         open={modalOpen}
         onClose={handleCloseModal}
+      />
+
+      <AddTransactionForm
+        open={showIncomeForm}
+        onClose={() => setShowIncomeForm(false)}
+        type="income"
+        onAdd={handleAddTransaction}
+      />
+
+      <AddTransactionForm
+        open={showExpenseForm}
+        onClose={() => setShowExpenseForm(false)}
+        type="expense"
+        onAdd={handleAddTransaction}
       />
     </AppLayout>
   );

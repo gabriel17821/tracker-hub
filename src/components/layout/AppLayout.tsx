@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { Home, Receipt, TrendingUp, Menu, X } from 'lucide-react';
+import { Home, Receipt, TrendingUp, Menu, X, Wallet, Target } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -11,6 +11,8 @@ interface AppLayoutProps {
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/transactions', label: 'Transactions', icon: Receipt },
+  { path: '/accounts', label: 'Accounts', icon: Wallet },
+  { path: '/goals', label: 'Goals', icon: Target },
   { path: '/portfolio', label: 'Portfolio', icon: TrendingUp },
 ];
 

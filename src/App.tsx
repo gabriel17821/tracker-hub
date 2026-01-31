@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
+import Accounts from "./pages/Accounts";
+import Goals from "./pages/Goals";
 import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +33,8 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />
+            <Route path="/accounts" element={<Accounts />} />
+            <Route path="/goals" element={<Goals />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
