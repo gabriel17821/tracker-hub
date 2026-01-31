@@ -287,3 +287,111 @@ export const assetTypeLabels: Record<string, string> = {
   'etf': 'ETFs',
   'cash': 'Cash',
 };
+
+// Account types
+export interface Account {
+  id: string;
+  name: string;
+  type: 'checking' | 'savings' | 'credit' | 'investment' | 'cash';
+  balance: number;
+  institution: string;
+  lastUpdated: string;
+  accountNumber?: string;
+}
+
+export const mockAccounts: Account[] = [
+  {
+    id: 'acc1',
+    name: 'Main Checking',
+    type: 'checking',
+    balance: 4250.00,
+    institution: 'Chase',
+    lastUpdated: '2025-01-28',
+    accountNumber: '****4521',
+  },
+  {
+    id: 'acc2',
+    name: 'Emergency Fund',
+    type: 'savings',
+    balance: 12500.00,
+    institution: 'Marcus',
+    lastUpdated: '2025-01-28',
+    accountNumber: '****8832',
+  },
+  {
+    id: 'acc3',
+    name: 'Credit Card',
+    type: 'credit',
+    balance: -1850.00,
+    institution: 'Amex',
+    lastUpdated: '2025-01-27',
+    accountNumber: '****2234',
+  },
+  {
+    id: 'acc4',
+    name: 'Brokerage',
+    type: 'investment',
+    balance: 45000.00,
+    institution: 'Fidelity',
+    lastUpdated: '2025-01-28',
+    accountNumber: '****9912',
+  },
+];
+
+// Goals
+export interface Goal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline: string;
+  icon: string;
+  color: string;
+}
+
+export const mockGoals: Goal[] = [
+  {
+    id: 'g1',
+    name: 'Emergency Fund',
+    targetAmount: 15000,
+    currentAmount: 12500,
+    deadline: '2025-06-01',
+    icon: 'shield',
+    color: 'emerald',
+  },
+  {
+    id: 'g2',
+    name: 'Vacation',
+    targetAmount: 5000,
+    currentAmount: 2100,
+    deadline: '2025-08-01',
+    icon: 'plane',
+    color: 'blue',
+  },
+  {
+    id: 'g3',
+    name: 'New Car',
+    targetAmount: 25000,
+    currentAmount: 8500,
+    deadline: '2026-01-01',
+    icon: 'car',
+    color: 'violet',
+  },
+  {
+    id: 'g4',
+    name: 'Home Down Payment',
+    targetAmount: 60000,
+    currentAmount: 18000,
+    deadline: '2027-01-01',
+    icon: 'home',
+    color: 'amber',
+  },
+];
+
+export const accountTypeLabels: Record<string, string> = {
+  'checking': 'Checking',
+  'savings': 'Savings',
+  'credit': 'Credit Card',
+  'investment': 'Investment',
+  'cash': 'Cash',
+};
